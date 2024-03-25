@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 ringbuf = "0.3"
 alsa = "0.9"
+gattrs = { git = "https://github.com/benarmstrongg/gattrs.git", branch = "main" }
+zbus = { version = "2.2.0", default-features = false }
+tokio = { version = "1", features = ["full"] }
