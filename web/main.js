@@ -93,7 +93,7 @@ function Device() {
     return html`<div>
         <div>
             Gain
-        <div>
+        </div>
         <div>
             <input 
                 type="range" min="0" max="255" value=${config.gain}
