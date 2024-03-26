@@ -18,6 +18,11 @@ Components
 */
 function Device() {
     const [ch, setCh] = useState();
+    const [config, setConfig] = useState();
+
+    useEffect(() => {
+        log();
+    }, [ch]);
 
     const connect = () => {
         navigator.bluetooth.requestDevice({
@@ -53,11 +58,23 @@ function Device() {
         ch.readValue()
             .then(v => {
                 const str = new TextDecoder().decode(v.buffer);
-                console.log(v, str);
+                console.log('value: ', v, `as string: ${str}`);
+                setConfig(JSON.parse(str));
             })
             .catch(error => {
                 console.error(error);
             })
+    };
+
+    const write = (config) => {
+        const enc = new TextEncoder();
+        ch.writeValue(enc.encode(JSON.stringify(config)))
+            .then(() => {
+                log();
+            })
+            .catch(error => {
+                console.error(error);
+            });
     };
 
     if (!ch) {
@@ -66,7 +83,26 @@ function Device() {
         </div>`
     }
 
+    if (!config) {
+        return html`<div>
+            Loading...
+        </div>`
+    }
+    // we have a config
+
     return html`<div>
-        <button onClick=${() => log()}>IO</button>
+        <div>
+            Gain
+        <div>
+        <div>
+            <input 
+                type="range" min="0" max="255" value=${config.gain}
+                onChange=${(e) => {
+            console.log(e.target.value);
+            setConfig({ gain: parseInt(e.target.value) });
+            write({ gain: parseInt(e.target.value) });
+        }}
+            />
+        </div>
     </div>`
 }
