@@ -9,10 +9,64 @@ function App() {
     useEffect(() => {
     }, []);
 
-    return html`<div>BLE Amp</div>`;
+    return html`<${Device} />`;
 }
 render(html`<${App} />`, document.body);
 
 /*
 Components
 */
+function Device() {
+    const [ch, setCh] = useState();
+
+    const connect = () => {
+        navigator.bluetooth.requestDevice({
+            filters: [
+                { services: ['00000000-0000-0000-0000-0000feedc0de'] }
+            ]
+        })
+            .then(device => {
+                console.log(device);
+                return device.gatt.connect();
+            })
+            .then(server => {
+                console.log('server', server);
+                return server.getPrimaryServices();
+            })
+            .then(services => {
+                console.log('services', services);
+                const service = services[0];
+                return service.getCharacteristics();
+            })
+            .then(chars => {
+                console.log('chars', chars);
+                const characteristic = chars[0];
+                console.log(characteristic);
+                setCh(characteristic);
+            })
+            .catch(error => { console.error(error); });
+    };
+
+    const log = () => {
+        if (!ch) return;
+
+        ch.readValue()
+            .then(v => {
+                const str = new TextDecoder().decode(v.buffer);
+                console.log(v, str);
+            })
+            .catch(error => {
+                console.error(error);
+            })
+    };
+
+    if (!ch) {
+        return html`<div>
+            <button onClick=${() => connect()}>Connect</button>
+        </div>`
+    }
+
+    return html`<div>
+        <button onClick=${() => log()}>IO</button>
+    </div>`
+}

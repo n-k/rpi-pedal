@@ -633,6 +633,8 @@ dependencies = [
  "env_logger",
  "futures",
  "ringbuf",
+ "serde",
+ "serde_json",
  "tokio",
  "uuid",
 ]

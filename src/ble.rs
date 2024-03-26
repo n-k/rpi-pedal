@@ -18,10 +18,15 @@ use tokio::{
     time::sleep,
 };
 
-pub async fn app(_amp_config: Arc<RwLock<Vec<u8>>>) -> bluer::Result<()> {
+use crate::amp::AmpConfig;
+
+pub async fn app(_amp_config: Arc<RwLock<AmpConfig>>) -> bluer::Result<()> {
     const MANUFACTURER_ID: u16 = 0xf00d;
     const SERVICE_UUID: uuid::Uuid = uuid::Uuid::from_u128(0xFEEDC0DE);
     const CHARACTERISTIC_UUID: uuid::Uuid = uuid::Uuid::from_u128(0xF00DC0DE00001);
+
+    eprintln!("service: {}", &SERVICE_UUID);
+    eprintln!("char: {}", &CHARACTERISTIC_UUID);
 
     let session = bluer::Session::new().await?;
     let adapter = session.default_adapter().await?;
@@ -65,9 +70,10 @@ pub async fn app(_amp_config: Arc<RwLock<Vec<u8>>>) -> bluer::Result<()> {
                     fun: Box::new(move |req| {
                         let value = value_read.clone();
                         async move {
-                            let value = value.read().unwrap().clone();
-                            println!("Read request {:?} with value {:x?}", &req, &value);
-                            Ok(value)
+                            let value: &AmpConfig = &*value.read().unwrap();
+                            println!("Read request {:?} with value {:?}", &req, &value);
+                            let bytes = serde_json::to_vec(value).unwrap();
+                            Ok(bytes)
                         }
                         .boxed()
                     }),
@@ -79,9 +85,10 @@ pub async fn app(_amp_config: Arc<RwLock<Vec<u8>>>) -> bluer::Result<()> {
                     method: CharacteristicWriteMethod::Fun(Box::new(move |new_value, req| {
                         let value = value_write.clone();
                         async move {
-                            println!("Write request {:?} with value {:x?}", &req, &new_value);
+                            let amp_config: AmpConfig = serde_json::from_slice(&new_value).unwrap();
+                            println!("Write request {:?} with value {:x?}", &req, &amp_config);
                             let mut value = value.write().unwrap();
-                            *value = new_value;
+                            *value = amp_config;
                             Ok(())
                         }
                         .boxed()
