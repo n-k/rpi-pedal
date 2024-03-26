@@ -1,6 +1,10 @@
 use alsa::{pcm::*, Direction, ValueOr, PCM};
+use amp::Amp;
 use ringbuf::HeapRb;
 use std::thread;
+
+mod amp;
+mod ble;
 
 fn start_pcm_stream(device: &str, dir: Direction) -> anyhow::Result<PCM> {
     let pcm = PCM::new(device, dir, false)?;
@@ -17,8 +21,13 @@ fn start_pcm_stream(device: &str, dir: Direction) -> anyhow::Result<PCM> {
     Ok(pcm)
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
+    let amp = Amp::new();
+    let amp_config = amp.config.clone();
+
     let rb = HeapRb::<u32>::new(8192 * 10);
     let (mut prod, mut cons) = rb.split();
 
@@ -37,22 +46,12 @@ async fn main() -> anyhow::Result<()> {
         let mut buf = [0u32; 1024];
         loop {
             cons.pop_slice(&mut buf);
+            let _ = amp.amplify(&mut buf);
             io_out.writei(&buf).unwrap();
         }
     });
 
-    loop {
-        thread::sleep(std::time::Duration::from_millis(500));
-    }
-
-    // build and server GATT application
-    // GattApplication::new()
-    //     .await
-    //     .service(CounterService::default())
-    //     .await
-    //     .advertise()
-    //     .serve()
-    //     .await?;
+    ble::app(amp_config).await?;
 
     Ok(())
 }
